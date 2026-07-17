@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Type, Any, Callable, Union, List
+from typing import Type, Union, List
 
 
 def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1):
@@ -13,7 +12,7 @@ def conv1x1(in_planes: int, out_planes: int, stride: int = 1):
 class BasicBlock(nn.Module):
     expansion: int = 1
 
-    def __init__(self, inplanes: int, planes: int, stride: int = 1, groups: int = 1, base_width: int = 64, dilation: int = 1):
+    def __init__(self, inplanes: int, planes: int, stride: int = 1, downsample: nn.Module = None, groups: int = 1, base_width: int = 64, dilation: int = 1):
         super(BasicBlock, self).__init__()
         norm_layer = nn.BatchNorm2d
         self.conv1 = conv3x3(inplanes, planes, stride)
@@ -21,6 +20,7 @@ class BasicBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = norm_layer(planes)
+        self.downsample = downsample
         self.stride = stride
 
     def forward(self, x):
@@ -33,6 +33,9 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
         out += identity
         out = self.relu(out)
 
@@ -41,7 +44,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion: int = 4
 
-    def __init__(self, inplanes: int, planes: int, stride: int = 1, groups: int = 1, base_width: int = 64, dilation: int = 1):
+    def __init__(self, inplanes: int, planes: int, stride: int = 1, downsample: nn.Module = None, groups: int = 1, base_width: int = 64, dilation: int = 1):
         super(Bottleneck, self).__init__()
 
         norm_layer = nn.BatchNorm2d
@@ -54,6 +57,7 @@ class Bottleneck(nn.Module):
         self.conv3 = conv1x1(width, planes * self.expansion)
         self.bn3 = norm_layer(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
         self.stride = stride
 
     def forward(self, x):
@@ -69,6 +73,9 @@ class Bottleneck(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
 
         out += identity
         out = self.relu(out)
@@ -115,13 +122,20 @@ class ResNet18(nn.Module):
                     nn.init.constant_(m.bn2.weight, 0)  # type: ignore[arg-type]
 
     def _make_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int, stride: int = 1, dilate: bool = False):
+        norm_layer = nn.BatchNorm2d
+        downsample = None
         previous_dilation = self.dilation
         if dilate:
             self.dilation *= stride
             stride = 1
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                conv1x1(self.inplanes, planes * block.expansion, stride),
+                norm_layer(planes * block.expansion),
+            )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, self.groups, self.base_width, previous_dilation))
+        layers.append(block(self.inplanes, planes, stride, downsample, self.groups, self.base_width, previous_dilation))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes, groups=self.groups, base_width=self.base_width, dilation=self.dilation))
@@ -149,5 +163,6 @@ class ResNet18(nn.Module):
     def forward(self, x):
         return self._forward_impl(x)
 
-resnet18 = ResNet18(BasicBlock, [2, 2, 2, 2])
-print(resnet18)
+if __name__ == "__main__":
+    resnet18 = ResNet18(BasicBlock, [2, 2, 2, 2])
+    print(resnet18)
