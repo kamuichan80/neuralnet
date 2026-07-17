@@ -103,9 +103,9 @@ class Inception(nn.Module):
                 )
     def forward(self, x):
         branch1 = self.branch1(x)
-        branch2 = self.branch1(x)
-        branch3 = self.branch1(x)
-        branch4 = self.branch1(x)
+        branch2 = self.branch2(x)
+        branch3 = self.branch3(x)
+        branch4 = self.branch4(x)
 
         outputs = [branch1, branch2, branch3, branch4]
         return torch.cat(outputs, 1)
@@ -122,5 +122,6 @@ class BasicConv2d(nn.Module):
         x = self.bn(x)
         return F.relu(x, inplace=True)
 
-googlenet = GoogLeNet()
-print(googlenet)
+if __name__ == "__main__":
+    googlenet = GoogLeNet()
+    print(googlenet)

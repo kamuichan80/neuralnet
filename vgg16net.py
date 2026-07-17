@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class VGG16Net(nn.Module):
     def __init__(self, num_classes=1000):
@@ -52,9 +51,10 @@ class VGG16Net(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.avgpool(x)
-        x = x.view(x.size(0), 512 * 7 * 7)
+        x = torch.flatten(x, 1)
         x = self.classifier(x)
         return x
-    
-vgg16net = VGG16Net()
-print(vgg16net)
+
+if __name__ == "__main__":
+    vgg16net = VGG16Net()
+    print(vgg16net)

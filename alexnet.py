@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class AlexNet(nn.Module):
     def __init__(self, num_classes=1000):
@@ -38,5 +37,6 @@ class AlexNet(nn.Module):
         x = self.classifier(x)
         return x
     
-alexnet = AlexNet()
-print(alexnet)
+if __name__ == "__main__":
+    alexnet = AlexNet()
+    print(alexnet)
