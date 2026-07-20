@@ -13,6 +13,8 @@ import math
 import torch
 import torch.nn as nn
 
+from boxes import decode_grid, decode_ltrb
+
 
 def bbox_ciou(pred, target, eps=1e-7):
     """Elementwise IoU and CIoU between two (N, 4) xyxy box tensors."""
@@ -60,15 +62,6 @@ class DECYOLOLoss(nn.Module):
         self.cls_weight = cls_weight
         self.bce = nn.BCEWithLogitsLoss(reduction='none')
 
-    @staticmethod
-    def _grid_centers(h, w, stride, device):
-        ys, xs = torch.meshgrid(
-            torch.arange(h, device=device), torch.arange(w, device=device), indexing='ij'
-        )
-        cx = (xs.float() + 0.5) * stride
-        cy = (ys.float() + 0.5) * stride
-        return cx.reshape(-1), cy.reshape(-1)
-
     def forward(self, preds, targets):
         """
         preds: list of 3 tensors (B, 5 + num_classes, H, W), one per stride.
@@ -80,7 +73,7 @@ class DECYOLOLoss(nn.Module):
         cx_list, cy_list, stride_list, level_sizes = [], [], [], []
         for stride, (lo, hi), p in zip(self.strides, self.size_ranges, preds):
             _, _, h, w = p.shape
-            cx, cy = self._grid_centers(h, w, stride, device)
+            cx, cy = decode_grid(h, w, stride, device)
             cx_list.append(cx)
             cy_list.append(cy)
             stride_list.append(torch.full_like(cx, stride))
@@ -140,12 +133,7 @@ class DECYOLOLoss(nn.Module):
                 box_target[b, pos_idx] = gt_boxes[matched_gt]
                 cls_target[b, pos_idx, gt_cls[matched_gt]] = 1.0
 
-        l, t, r, btm = reg_pred.exp().unbind(-1)
-        px1 = cx[None] - l * stride_per_point[None]
-        py1 = cy[None] - t * stride_per_point[None]
-        px2 = cx[None] + r * stride_per_point[None]
-        py2 = cy[None] + btm * stride_per_point[None]
-        box_pred = torch.stack([px1, py1, px2, py2], dim=-1)
+        box_pred = decode_ltrb(reg_pred, cx[None], cy[None], stride_per_point[None])
 
         num_pos = pos_mask.sum().clamp(min=1)
 
