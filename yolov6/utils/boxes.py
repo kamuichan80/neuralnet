@@ -1,7 +1,7 @@
 """
 Shared box utilities for DEC-YOLO's anchor-free head: grid-center construction, the
 FCOS-style (l, t, r, b) -> xyxy decode, pairwise IoU, and greedy NMS. Used by both the
-training loss (losses.py) and the evaluation script (metrics.py).
+training loss (yolov6/core/loss.py) and the evaluator (yolov6/core/evaluator.py).
 """
 
 import torch

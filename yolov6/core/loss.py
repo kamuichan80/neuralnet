@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
 """
-Loss functions for DEC-YOLO's anchor-free efficient decoupling head (Section 3.3).
+Loss functions for DEC-YOLO's anchor-free efficient decoupling head (paper Section 3.3).
 
 Each of the three head outputs is (B, 4 + 1 + num_classes, H, W): box regression as
 FCOS-style (l, t, r, b) distances from the grid-cell center, objectness, and per-class
@@ -13,7 +15,7 @@ import math
 import torch
 import torch.nn as nn
 
-from boxes import decode_grid, decode_ltrb
+from yolov6.utils.boxes import decode_grid, decode_ltrb
 
 
 def bbox_ciou(pred, target, eps=1e-7):

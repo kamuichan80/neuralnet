@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
 """
 YOLO-format dataset loading for DEC-YOLO (Section 4.1 of the paper).
 

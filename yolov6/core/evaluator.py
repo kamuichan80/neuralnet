@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
 """
-mAP evaluation logic for DEC-YOLO (Section 4.2.1).
+mAP evaluation logic for DEC-YOLO (paper Section 4.2.1).
 
 Decodes the anchor-free head outputs into boxes, runs per-class NMS, greedily matches
 predictions to ground truth by descending confidence at each of 10 IoU thresholds
@@ -9,7 +11,7 @@ the paper's precision/recall/F1 (Eq. 13-15) taken at each class's best-F1 operat
 
 import torch
 
-from boxes import box_iou, decode_grid, decode_ltrb, nms
+from yolov6.utils.boxes import box_iou, decode_grid, decode_ltrb, nms
 
 
 @torch.no_grad()

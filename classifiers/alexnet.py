@@ -1,9 +1,14 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+"""AlexNet (Krizhevsky, Sutskever & Hinton, 2012), config-driven build."""
+
 import torch
 import torch.nn as nn
 
+
 class AlexNet(nn.Module):
     def __init__(self, num_classes=1000):
-        super(AlexNet, self).__init__()
+        super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
             nn.ReLU(inplace=True),
@@ -19,7 +24,7 @@ class AlexNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2),
         )
-        self.avgpool = nn.AdaptiveAvgPool2d((6,6))
+        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
         self.classifier = nn.Sequential(
             nn.Dropout(),
             nn.Linear(256 * 6 * 6, 4096),
@@ -34,9 +39,21 @@ class AlexNet(nn.Module):
         x = self.features(x)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
-    
+        return self.classifier(x)
+
+
+def build_model(cfg):
+    return AlexNet(num_classes=cfg.model.num_classes)
+
+
 if __name__ == "__main__":
-    alexnet = AlexNet()
-    print(alexnet)
+    import sys
+    from pathlib import Path
+
+    ROOT = Path(__file__).resolve().parents[1]
+    if str(ROOT) not in sys.path:
+        sys.path.append(str(ROOT))
+    from yolov6.utils.config import Config
+
+    cfg = Config.fromfile(ROOT / 'configs' / 'alexnet.py')
+    print(build_model(cfg))

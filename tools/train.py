@@ -1,29 +1,39 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
 """
-Training script for DEC-YOLO on a YOLO-format surface-defect dataset (Section 4.1, 4.2).
+Training script for DEC-YOLO on a YOLO-format surface-defect dataset (paper Section 4.1, 4.2).
 
 Expected data layout:
     <data>/images/train/*.jpg   <data>/labels/train/*.txt
     <data>/images/val/*.jpg     <data>/labels/val/*.txt
 
 Example:
-    python train.py --data /path/to/laser_nozzle_dataset --epochs 200 --batch-size 8 --lr 0.001
+    python tools/train.py --data /path/to/laser_nozzle_dataset --epochs 200 --batch-size 8 --lr 0.001
 """
 
 import argparse
 import os
+import sys
 import time
+from pathlib import Path
 
 import torch
 from torch.utils.data import DataLoader
 
-from datasets import CLASS_NAMES, LaserNozzleDataset, collate_fn
-from dec_yolo import DECYOLO
-from losses import DECYOLOLoss
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+
+from yolov6.core.loss import DECYOLOLoss
+from yolov6.data.datasets import CLASS_NAMES, LaserNozzleDataset, collate_fn
+from yolov6.models.yolo import build_model
+from yolov6.utils.config import Config
 
 
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--data', required=True, help='dataset root; see module docstring for layout')
+    p.add_argument('--conf-file', default='configs/dec_yolo.py', help='model config, see configs/dec_yolo.py')
     p.add_argument('--num-classes', type=int, default=len(CLASS_NAMES))
     p.add_argument('--img-size', type=int, default=640)
     p.add_argument('--epochs', type=int, default=200)
@@ -90,7 +100,8 @@ def main():
     os.makedirs(args.save_dir, exist_ok=True)
     device = torch.device(args.device)
 
-    model = DECYOLO(num_classes=args.num_classes).to(device)
+    cfg = Config.fromfile(args.conf_file)
+    model = build_model(cfg, num_classes=args.num_classes, device=device)
     criterion = DECYOLOLoss(num_classes=args.num_classes)
     train_loader, val_loader = build_dataloaders(args)
 

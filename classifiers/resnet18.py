@@ -1,19 +1,25 @@
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+"""ResNet-18 (He, Zhang, Ren & Sun, 2015), config-driven build."""
+
 import torch
 import torch.nn as nn
-from typing import Type, Union, List
 
 
-def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1):
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=dilation, groups=groups, bias=False, dilation=dilation)
+def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=dilation,
+                      groups=groups, bias=False, dilation=dilation)
 
-def conv1x1(in_planes: int, out_planes: int, stride: int = 1):
+
+def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
-class BasicBlock(nn.Module):
-    expansion: int = 1
 
-    def __init__(self, inplanes: int, planes: int, stride: int = 1, downsample: nn.Module = None, groups: int = 1, base_width: int = 64, dilation: int = 1):
-        super(BasicBlock, self).__init__()
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1):
+        super().__init__()
         norm_layer = nn.BatchNorm2d
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
@@ -37,16 +43,14 @@ class BasicBlock(nn.Module):
             identity = self.downsample(x)
 
         out += identity
-        out = self.relu(out)
+        return self.relu(out)
 
-        return out
 
 class Bottleneck(nn.Module):
-    expansion: int = 4
+    expansion = 4
 
-    def __init__(self, inplanes: int, planes: int, stride: int = 1, downsample: nn.Module = None, groups: int = 1, base_width: int = 64, dilation: int = 1):
-        super(Bottleneck, self).__init__()
-
+    def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1, base_width=64, dilation=1):
+        super().__init__()
         norm_layer = nn.BatchNorm2d
         width = int(planes * (base_width / 64.)) * groups
 
@@ -78,18 +82,13 @@ class Bottleneck(nn.Module):
             identity = self.downsample(x)
 
         out += identity
-        out = self.relu(out)
-
-        return out
-
-
+        return self.relu(out)
 
 
 class ResNet18(nn.Module):
-
-
-    def __init__(self, block: Type[Union[BasicBlock, Bottleneck]], layers: List[int], num_classes: int = 1000, zero_init_residual: bool = False, groups: int = 1, width_per_group: int = 64):
-        super(ResNet18, self).__init__()
+    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+                 groups=1, width_per_group=64):
+        super().__init__()
         norm_layer = nn.BatchNorm2d
 
         self.inplanes = 64
@@ -117,11 +116,11 @@ class ResNet18(nn.Module):
         if zero_init_residual:
             for m in self.modules():
                 if isinstance(m, Bottleneck):
-                    nn.init.constant_(m.bn3.weight, 0)  # type: ignore[arg-type]
+                    nn.init.constant_(m.bn3.weight, 0)
                 elif isinstance(m, BasicBlock):
-                    nn.init.constant_(m.bn2.weight, 0)  # type: ignore[arg-type]
+                    nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block: Type[Union[BasicBlock, Bottleneck]], planes: int, blocks: int, stride: int = 1, dilate: bool = False):
+    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
         norm_layer = nn.BatchNorm2d
         downsample = None
         previous_dilation = self.dilation
@@ -134,16 +133,15 @@ class ResNet18(nn.Module):
                 norm_layer(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, self.groups, self.base_width, previous_dilation))
+        layers = [block(self.inplanes, planes, stride, downsample, self.groups, self.base_width, previous_dilation)]
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups=self.groups, base_width=self.base_width, dilation=self.dilation))
+            layers.append(block(self.inplanes, planes, groups=self.groups,
+                                 base_width=self.base_width, dilation=self.dilation))
 
         return nn.Sequential(*layers)
 
     def _forward_impl(self, x):
-        
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -156,13 +154,24 @@ class ResNet18(nn.Module):
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
-        x = self.fc(x)
-
-        return x
+        return self.fc(x)
 
     def forward(self, x):
         return self._forward_impl(x)
 
+
+def build_model(cfg):
+    return ResNet18(BasicBlock, cfg.model.layers, num_classes=cfg.model.num_classes)
+
+
 if __name__ == "__main__":
-    resnet18 = ResNet18(BasicBlock, [2, 2, 2, 2])
-    print(resnet18)
+    import sys
+    from pathlib import Path
+
+    ROOT = Path(__file__).resolve().parents[1]
+    if str(ROOT) not in sys.path:
+        sys.path.append(str(ROOT))
+    from yolov6.utils.config import Config
+
+    cfg = Config.fromfile(ROOT / 'configs' / 'resnet18.py')
+    print(build_model(cfg))
